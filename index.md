@@ -12,6 +12,6 @@
 
 [Homework1 Description](files/IE582_Fall20_Homework1.pdf)
 
--You can find the Homework 1 Solutions [here](files/SUHEYLA_YILDIZ_HW1.html). Also, the codes are [here](files/SUHEYLA_YILDIZ_HW1.Rmd).
+-You can find the Homework 1 Solutions [here](files/SUHEYLA_YILDIZ_HW1.html). Also, the codes are [here](files/SUHEYLA_YILDIZ_HW1.html).
 
 
