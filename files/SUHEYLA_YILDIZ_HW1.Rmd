@@ -1,0 +1,474 @@
+---
+title: "IE582-HW1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Initialization
+
+```{r initilization, echo=TRUE, message=FALSE, warning=FALSE}
+setwd("C:/Users/HP/Desktop/IE582/HW1")
+getwd()
+require(plyr)
+```
+
+## Data from Premier League
+
+Seasons including 2018/2019, 2019/2020 and 2020/2021
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+s_2021 = (read.csv("E2021.csv")[,1:56])
+s_1920 = (read.csv("E1920.csv")[,1:56])
+s_1819 = (read.csv("E1819.csv")[,1:56])
+
+dat = rbind.fill(s_2021,s_1920,s_1819)
+data = dat[,1:56]
+head(data,5)
+```
+
+## Task 1 - Question 1
+
+```{r}
+hist(data$FTHG, freq=TRUE, labels=TRUE,xlab="Home Goals", ylab = "Number of Games", main = "Home Score", col = "red",right=FALSE, breaks = 20, ylim=c(0,300))
+hist(data$FTAG, freq=TRUE, labels=TRUE,xlab="Away Goals", ylab = "Number of Games", main = "Away Score", col = "yellow",right=FALSE, breaks = 10, ylim=c(0,300), xlim=c(0,10))                
+hist(data$FTHG-data$FTAG, freq=TRUE, labels=TRUE,xlab="Home Goals - Away Goals", ylab = "Number of Games", main = "Home Score - Away Score", col = "blue",right=FALSE, breaks = 20, ylim=c(0,200), xlim=c(-10,10))                
+
+```
+
+## Task 1 -  Question 2
+
+Firstly, we plot the histogram of Home Goals and compare its distribution with Poisson distribution. As the mean of the Poisson distribution, we take the sample mean. Secondly, we do the same staff for the Away Goals.
+
+```{r}
+
+h_mean = mean(data$FTHG)
+
+h_mean
+
+a=dpois(0,h_mean)
+b=dpois(1,h_mean)
+c=dpois(2,h_mean)
+d=dpois(3,h_mean)
+e=dpois(4,h_mean)
+f=dpois(5,h_mean)
+g=dpois(6,h_mean)
+h=dpois(7,h_mean)
+j=dpois(8,h_mean)
+
+exp_obs_h=c(a,b,c,d,e,f,g,h,j)*length(data$FTHG)
+
+
+
+hist(data$FTHG, freq=TRUE, labels=TRUE,xlab="Home Goals", ylab = "Number of Games", main = "Home Score", col = "red",right=FALSE, breaks = 20, ylim=c(0,300))
+lines(0:8,exp_obs_h)
+
+
+```
+
+This graph shows that Home Goals data distribution looks like *Poisson distribution* with mean $\lambda=1.531$.
+
+
+
+```{r}
+a_mean = mean(data$FTAG)
+
+a_mean 
+
+l=dpois(0,a_mean)
+m=dpois(1,a_mean)
+n=dpois(2,a_mean)
+o=dpois(3,a_mean)
+p=dpois(4,a_mean)
+r=dpois(5,a_mean)
+s=dpois(6,a_mean)
+t=dpois(7,a_mean)
+u=dpois(8,a_mean)
+v=dpois(9,a_mean)
+y=dpois(10,a_mean)
+
+exp_obs_a=c(l,m,n,o,p,r,s,t,u,v,y)*length(data$FTAG)
+
+
+
+hist(data$FTAG, freq=TRUE, labels=TRUE,xlab="Away Goals", ylab = "Number of Games", main = "Away Score", col = "yellow",right=FALSE, breaks = 10, ylim=c(0,300), xlim=c(0,10))
+lines(0:10,exp_obs_a)
+```
+
+
+This graph shows that Away Goals data distribution looks like *Poisson distribution* with mean $\lambda=1.265$.
+
+
+## Task 2 - Question 1
+
+We selected 4 bookmakers: *Bet365, BetAndWin,Pinnacle and William Hill*.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+fprobs = 1/data[,c("B365H","B365D","B365A","BWH","BWD","BWA","PSH","PSD","PSA","WHH","WHD","WHA")]
+
+names(fprobs) <- c("B365H_prob","B365D_prob","B365A_prob","BWH_prob","BWD_prob","BWA_prob","PSH_prob","PSD_prob","PSA_prob","WHH_prob","WHD_prob","WHA_prob")
+
+head(fprobs,10)
+data_with_prob <- cbind(data,fprobs)
+```
+
+Calculated probabalities of **home win, draw and away win** for each bookmaker.
+
+
+## Task 2 - Question 2
+
+Normalized probabilities are calculated for each bookmaker separately. 
+
+```{r}
+normprobs=data.frame()
+
+for(i in 1:length(data_with_prob[,1])){
+  normprobs[i,1] <- fprobs[i,"B365H_prob"]/sum(fprobs[i,"B365H_prob"],fprobs[i,"B365D_prob"],fprobs[i,"B365A_prob"])
+  normprobs[i,2] <- fprobs[i,"B365D_prob"]/sum(fprobs[i,"B365H_prob"],fprobs[i,"B365D_prob"],fprobs[i,"B365A_prob"])
+  normprobs[i,3] <- fprobs[i,"B365A_prob"]/sum(fprobs[i,"B365H_prob"],fprobs[i,"B365D_prob"],fprobs[i,"B365A_prob"])
+  normprobs[i,4] <- fprobs[i,"BWH_prob"]/sum(fprobs[i,"BWH_prob"],fprobs[i,"BWD_prob"],fprobs[i,"BWA_prob"])
+  normprobs[i,5] <- fprobs[i,"BWD_prob"]/sum(fprobs[i,"BWH_prob"],fprobs[i,"BWD_prob"],fprobs[i,"BWA_prob"])
+  normprobs[i,6] <- fprobs[i,"BWA_prob"]/sum(fprobs[i,"BWH_prob"],fprobs[i,"BWD_prob"],fprobs[i,"BWA_prob"])
+  normprobs[i,7] <- fprobs[i,"PSH_prob"]/sum(fprobs[i,"PSH_prob"],fprobs[i,"PSD_prob"],fprobs[i,"PSA_prob"])
+  normprobs[i,8] <- fprobs[i,"PSD_prob"]/sum(fprobs[i,"PSH_prob"],fprobs[i,"PSD_prob"],fprobs[i,"PSA_prob"])
+  normprobs[i,9] <- fprobs[i,"PSA_prob"]/sum(fprobs[i,"PSH_prob"],fprobs[i,"PSD_prob"],fprobs[i,"PSA_prob"])
+  normprobs[i,10] <- fprobs[i,"WHH_prob"]/sum(fprobs[i,"WHH_prob"],fprobs[i,"WHD_prob"],fprobs[i,"WHA_prob"])
+  normprobs[i,11] <- fprobs[i,"WHD_prob"]/sum(fprobs[i,"WHH_prob"],fprobs[i,"WHD_prob"],fprobs[i,"WHA_prob"])
+  normprobs[i,12] <- fprobs[i,"WHA_prob"]/sum(fprobs[i,"WHH_prob"],fprobs[i,"WHD_prob"],fprobs[i,"WHA_prob"])
+}
+names(normprobs) = c("norm_B365H_probs","norm_B365D_probs","norm_B365A_probs","norm_BWH_probs","norm_BWD_probs","norm_BWA_probs","norm_PSH_probs","norm_PSD_probs","norm_PSA_probs","norm_WHH_probs","norm_WHD_probs","norm_WHA_probs")
+
+head(normprobs,10)
+
+data_with_prob <- cbind(data_with_prob,normprobs)
+
+```
+
+
+
+## Task 2 - Question 3
+
+
+Firstly, we calculated *P(home win)-P(away win)*.
+
+
+```{r}
+
+data_with_prob["B365Diff"]=data_with_prob["norm_B365H_probs"]-data_with_prob["norm_B365A_probs"]
+data_with_prob["BWDiff"]=data_with_prob["norm_BWH_probs"]-data_with_prob["norm_BWA_probs"]
+data_with_prob["PSDiff"]=data_with_prob["norm_PSH_probs"]-data_with_prob["norm_PSA_probs"]
+data_with_prob["WHDiff"]=data_with_prob["norm_WHH_probs"]-data_with_prob["norm_WHA_probs"]
+```
+
+
+We determined the bins as follows:
+
+
+```{r}
+bins= c(-1,-0.8,-0.6,-0.4,-0.2,0,0.2,0.4,0.6,0.8,1)
+
+
+```
+
+
+As a first bookmaker, we examined Bet365.
+
+
+```{r}
+#B365
+
+counter=rep(0,10)
+counter1=rep(0,10)
+for(j in 1:10){
+  counter[j]=length(subset(data_with_prob,B365Diff>bins[j] & B365Diff<bins[j+1])[,1])
+  counter1[j]=length(subset(data_with_prob,FTR=="D" & B365Diff>bins[j] & B365Diff<bins[j+1])[,1])
+}
+
+probability_of_draw=rep(0,10)
+new_bins=rep(0,10)
+for (k in 1:10){
+  probability_of_draw[k]=counter1[k]/counter[k]
+  new_bins[k] = (bins[k]+bins[k+1])/2
+}
+
+plot(data_with_prob$B365Diff,data_with_prob$norm_B365D_probs, main="B365",col="red",ylim = c(0,0.35),xlim=c(-1,1),ylab="P(Draw)",xlab="P(Home)-P(Away)")
+lines(new_bins,probability_of_draw,col="blue",type="o")
+abline(v=bins)
+```
+
+
+Second bookmaker is BetAndWin.
+
+```{r}
+counter=rep(0,10)
+counter1=rep(0,10)
+for(j in 1:10){
+  counter[j]=length(subset(data_with_prob,BWDiff>bins[j] & BWDiff<bins[j+1])[,1])
+  counter1[j]=length(subset(data_with_prob,FTR=="D" & BWDiff>bins[j] & BWDiff<bins[j+1])[,1])
+}
+
+probability_of_draw=rep(0,10)
+new_bins=rep(0,10)
+for (k in 1:10){
+  probability_of_draw[k]=counter1[k]/counter[k]
+  new_bins[k] = (bins[k]+bins[k+1])/2
+}
+
+plot(data_with_prob$BWDiff,data_with_prob$norm_BWD_probs, main="BW",col="red",ylim = c(0,0.35),xlim=c(-1,1),ylab="P(Draw)",xlab="P(Home)-P(Away)")
+lines(new_bins,probability_of_draw,col="blue",type="o")
+abline(v=bins)
+```
+
+
+Third bookmaker is Pinnacle. 
+
+```{r}
+counter=rep(0,10)
+counter1=rep(0,10)
+for(j in 1:10){
+  counter[j]=length(subset(data_with_prob,PSDiff>bins[j] & PSDiff<bins[j+1])[,1])
+  counter1[j]=length(subset(data_with_prob,FTR=="D" & PSDiff>bins[j] & PSDiff<bins[j+1])[,1])
+}
+
+probability_of_draw=rep(0,10)
+new_bins=rep(0,10)
+for (k in 1:10){
+  probability_of_draw[k]=counter1[k]/counter[k]
+  new_bins[k] = (bins[k]+bins[k+1])/2
+}
+
+plot(data_with_prob$PSDiff,data_with_prob$norm_PSD_probs, main="PS",col="red",ylim = c(0,0.35),xlim=c(-1,1),ylab="P(Draw)",xlab="P(Home)-P(Away)")
+lines(new_bins,probability_of_draw,col="blue",type="o")
+abline(v=bins)
+```
+
+
+
+Fourth bookmaker is William Hill. 
+
+```{r}
+counter=rep(0,10)
+counter1=rep(0,10)
+for(j in 1:10){
+  counter[j]=length(subset(data_with_prob,WHDiff>bins[j] & WHDiff<bins[j+1])[,1])
+  counter1[j]=length(subset(data_with_prob,FTR=="D" & WHDiff>bins[j] & WHDiff<bins[j+1])[,1])
+}
+
+probability_of_draw=rep(0,10)
+new_bins=rep(0,10)
+for (k in 1:10){
+  probability_of_draw[k]=counter1[k]/counter[k]
+  new_bins[k] = (bins[k]+bins[k+1])/2
+}
+
+plot(data_with_prob$WHDiff,data_with_prob$norm_WHD_probs, main="WH",col="red",ylim = c(0,0.35),xlim=c(-1,1),ylab="P(Draw)",xlab="P(Home)-P(Away)")
+lines(new_bins,probability_of_draw,col="blue",type="o")
+abline(v=bins)
+
+```
+
+
+## Task 2 - Question 4
+
+It can be seen from the graphs above, actual probabilities for most of the games in the interval *0 < P(home win)- P(away win) < 0.4*, are higher than odd probablities given by bookmakers. Therefore, we can say  that there is a positive bias in these odds. 
+
+
+## Task 3 - Question
+
+Firstly, we need to discard the matches with red cards.
+
+
+```{r}
+
+data_with_prob["total_red"]=data_with_prob["HR"]+data_with_prob["AR"]
+without_redcard=subset(data_with_prob,total_red==0)
+```
+
+
+Now, we just changed our main data set to examine the games without red card.We will use the same bookmakers to compare results with general case. 
+
+
+For Bet365:
+
+
+```{r}
+counter=rep(0,10)
+counter1=rep(0,10)
+for(j in 1:10){
+  counter[j]=length(subset(data_with_prob,B365Diff>bins[j] & B365Diff<bins[j+1])[,1])
+  counter1[j]=length(subset(data_with_prob,FTR=="D" & B365Diff>bins[j] & B365Diff<bins[j+1])[,1])
+}
+
+
+
+counter_nored=rep(0,10)
+counter1_nored=rep(0,10)
+for(j in 1:10){
+counter_nored[j]=length(subset(without_redcard,B365Diff>bins[j] & B365Diff<bins[j+1])[,1])
+counter1_nored[j]=length(subset(without_redcard,FTR=="D" & B365Diff>bins[j] & B365Diff<bins[j+1])[,1])
+}
+
+
+probability_of_draw=rep(0,10)
+new_bins=rep(0,10)
+for (k in 1:10){
+  probability_of_draw[k]=counter1[k]/counter[k]
+  new_bins[k] = (bins[k]+bins[k+1])/2
+}
+
+probability_of_draw_noredcard=rep(0,10)
+
+for (k in 1:10){
+  probability_of_draw_noredcard[k]=counter1_nored[k]/counter_nored[k]
+
+}
+
+plot(without_redcard$B365Diff,without_redcard$norm_B365D_probs, main="B365NoRED",col="red",ylim = c(0,0.35),xlim=c(-1,1),ylab="P(Draw)",xlab="P(Home)-P(Away)")
+lines(new_bins,probability_of_draw_noredcard,col="blue",type="o")
+lines(new_bins,probability_of_draw,col="green",type="o")
+abline(v=bins)
+
+
+
+
+```
+
+
+
+For BetAndWin:
+
+
+```{r}
+
+
+counter=rep(0,10)
+counter1=rep(0,10)
+for(j in 1:10){
+  counter[j]=length(subset(data_with_prob,BWDiff>bins[j] & BWDiff<bins[j+1])[,1])
+  counter1[j]=length(subset(data_with_prob,FTR=="D" & BWDiff>bins[j] & BWDiff<bins[j+1])[,1])
+}
+
+
+
+counter_nored=rep(0,10)
+counter1_nored=rep(0,10)
+for(j in 1:10){
+  counter_nored[j]=length(subset(without_redcard,BWDiff>bins[j] & BWDiff<bins[j+1])[,1])
+  counter1_nored[j]=length(subset(without_redcard,FTR=="D" & BWDiff>bins[j] & BWDiff<bins[j+1])[,1])
+}
+
+
+probability_of_draw=rep(0,10)
+new_bins=rep(0,10)
+for (k in 1:10){
+  probability_of_draw[k]=counter1[k]/counter[k]
+  new_bins[k] = (bins[k]+bins[k+1])/2
+}
+
+probability_of_draw_noredcard=rep(0,10)
+
+for (k in 1:10){
+  probability_of_draw_noredcard[k]=counter1_nored[k]/counter_nored[k]
+  
+}
+
+plot(without_redcard$BWDiff,without_redcard$norm_BWD_probs, main="BWNoRED",col="red",ylim = c(0,0.35),xlim=c(-1,1),ylab="P(Draw)",xlab="P(Home)-P(Away)")
+lines(new_bins,probability_of_draw_noredcard,col="blue",type="o")
+lines(new_bins,probability_of_draw,col="green",type="o")
+abline(v=bins)
+
+```
+
+
+
+For Pinnacle:
+
+
+```{r}
+counter=rep(0,10)
+counter1=rep(0,10)
+for(j in 1:10){
+  counter[j]=length(subset(data_with_prob,PSDiff>bins[j] & PSDiff<bins[j+1])[,1])
+  counter1[j]=length(subset(data_with_prob,FTR=="D" & PSDiff>bins[j] & PSDiff<bins[j+1])[,1])
+}
+
+
+
+counter_nored=rep(0,10)
+counter1_nored=rep(0,10)
+for(j in 1:10){
+  counter_nored[j]=length(subset(without_redcard,PSDiff>bins[j] & PSDiff<bins[j+1])[,1])
+  counter1_nored[j]=length(subset(without_redcard,FTR=="D" & PSDiff>bins[j] & PSDiff<bins[j+1])[,1])
+}
+
+
+probability_of_draw=rep(0,10)
+new_bins=rep(0,10)
+for (k in 1:10){
+  probability_of_draw[k]=counter1[k]/counter[k]
+  new_bins[k] = (bins[k]+bins[k+1])/2
+}
+
+probability_of_draw_noredcard=rep(0,10)
+
+for (k in 1:10){
+  probability_of_draw_noredcard[k]=counter1_nored[k]/counter_nored[k]
+  
+}
+
+plot(without_redcard$PSDiff,without_redcard$norm_PSD_probs, main="PSNoRED",col="red",ylim = c(0,0.35),xlim=c(-1,1),ylab="P(Draw)",xlab="P(Home)-P(Away)")
+lines(new_bins,probability_of_draw_noredcard,col="blue",type="o")
+lines(new_bins,probability_of_draw,col="green",type="o")
+abline(v=bins)
+
+
+
+```
+
+
+For William Hill:
+
+
+```{r}
+counter=rep(0,10)
+counter1=rep(0,10)
+for(j in 1:10){
+  counter[j]=length(subset(data_with_prob,WHDiff>bins[j] & WHDiff<bins[j+1])[,1])
+  counter1[j]=length(subset(data_with_prob,FTR=="D" & WHDiff>bins[j] & WHDiff<bins[j+1])[,1])
+}
+
+
+
+counter_nored=rep(0,10)
+counter1_nored=rep(0,10)
+for(j in 1:10){
+  counter_nored[j]=length(subset(without_redcard,WHDiff>bins[j] & WHDiff<bins[j+1])[,1])
+  counter1_nored[j]=length(subset(without_redcard,FTR=="D" & WHDiff>bins[j] & WHDiff<bins[j+1])[,1])
+}
+
+
+probability_of_draw=rep(0,10)
+new_bins=rep(0,10)
+for (k in 1:10){
+  probability_of_draw[k]=counter1[k]/counter[k]
+  new_bins[k] = (bins[k]+bins[k+1])/2
+}
+
+probability_of_draw_noredcard=rep(0,10)
+
+for (k in 1:10){
+  probability_of_draw_noredcard[k]=counter1_nored[k]/counter_nored[k]
+  
+}
+
+plot(without_redcard$WHDiff,without_redcard$norm_WHD_probs, main="WHNoRED",col="red",ylim = c(0,0.35),xlim=c(-1,1),ylab="P(Draw)",xlab="P(Home)-P(Away)")
+lines(new_bins,probability_of_draw_noredcard,col="blue",type="o")
+lines(new_bins,probability_of_draw,col="green",type="o")
+abline(v=bins)
+
+
+```
+
+After removing the games with red card, actual probabilities are slightly shifted above ( except the interal -0.4 < P(home)-P(away) < 0). 
