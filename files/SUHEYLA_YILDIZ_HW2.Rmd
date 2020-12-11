@@ -1,0 +1,339 @@
+---
+title: "IE582-HW2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Initialization
+
+```{r initilization, echo=TRUE, message=FALSE, warning=FALSE}
+library(tidyverse) 
+library(reshape) 
+library(scatterplot3d)
+library(directlabels)
+library(DT) 
+library(ggplot2)
+library(dplyr)
+setwd("C:/Users/HP/Desktop/IE582/HW2")
+getwd()
+```
+
+Let us read the data.
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+x_tr = read.table("uWaveGestureLibrary_X_TRAIN")
+y_tr = read.table("uWaveGestureLibrary_Y_TRAIN")
+z_tr = read.table("uWaveGestureLibrary_Z_TRAIN")
+
+```
+
+
+
+## Part (a)
+
+We will visualize one instance from each class. We will calculate position of instances by taking cumulative sum of acceleration.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+transp_x_tr = as.data.frame(t(x_tr[,-1]))
+x_vel=as.matrix(cumsum(transp_x_tr))
+x_pos=as.matrix(cumsum(as.data.frame(x_vel)))
+
+x_pos1=as.matrix(t(x_pos))
+x_pos1=cbind(x_tr[,1],x_pos1)
+
+transp_y_tr = as.data.frame(t(y_tr[,-1]))
+y_vel=as.matrix(cumsum(transp_y_tr))
+y_pos=as.matrix(cumsum(as.data.frame(y_vel)))
+
+y_pos1=as.matrix(t(y_pos))
+y_pos1=cbind(y_tr[,1],y_pos1)
+
+transp_z_tr = as.data.frame(t(z_tr[,-1]))
+z_vel=as.matrix(cumsum(transp_z_tr))
+z_pos=as.matrix(cumsum(as.data.frame(z_vel)))
+
+z_pos1=as.matrix(t(z_pos))
+z_pos1=cbind(z_tr[,1],z_pos1)
+
+indexes=c()
+
+for (i in 1:8){
+  for(j in 1:nrow(x_tr)){
+    if(x_tr[j,1]==i){
+      indexes[i] = j 
+      break
+    }
+  }
+}
+
+for (i in 1:8)
+{
+  scatterplot3d(x=x_pos1[indexes[i],-1],y=y_pos1[indexes[i],-1],z=z_pos1[indexes[i],-1], main = paste("Gesture from class ", x_pos1[indexes[i],1]), xlab="X",ylab="Y",zlab="Z", color = "purple")
+}
+             
+
+```
+
+##Comments:
+- Visualization of gesture 1 is similar to original movement in gesture 1. 
+- Visualization of gesture 2 is also similar tooriginal movement in gesture 2 with its corner.
+- Visualizations of gesture 3,4,5 and 6 seem very different from original shapes. 
+- We can see circular movements in the visualizations of gesture 7 and 8 like in the original shapes. But their direction are not the same with original movement's direction.
+
+
+##Part (b)
+
+The problem is a type of an multivariate time series. We want to reduce it to univariate time series.Therefore, transform the data into the long format.
+
+Then, we'll apply PCA and visualize the reduced dimensions as time series.
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+x_pos1=as.data.frame(x_pos1)
+colnames(x_pos1)=c(0:315)
+
+x_pos1=mutate(x_pos1, id=row_number())
+
+molten_x = melt(x_pos1, id= c("0", "id"))
+x_pos_long=data.frame(matrix(0,nrow=nrow(molten_x), ncol=ncol(molten_x)))
+x_pos_long[,1]=molten_x[,2]
+x_pos_long[,2]=molten_x[,3]
+x_pos_long[,3]=molten_x[,4]
+x_pos_long[,4]=molten_x[,1]
+
+colnames(x_pos_long)= c("time_series_id", "time_index", "X","class")
+#####
+
+y_pos1=as.data.frame(y_pos1)
+colnames(y_pos1)=c(0:315)
+
+y_pos1=mutate(y_pos1, id=row_number())
+
+molten_y = melt(y_pos1, id= c("0", "id"))
+y_pos_long=data.frame(matrix(0,nrow=nrow(molten_y), ncol=ncol(molten_y)))
+y_pos_long[,1]=molten_y[,2]
+y_pos_long[,2]=molten_y[,3]
+y_pos_long[,3]=molten_y[,4]
+y_pos_long[,4]=molten_y[,1]
+
+colnames(y_pos_long)= c("time_series_id", "time_index", "Y","class")
+
+####
+z_pos1=as.data.frame(z_pos1)
+colnames(z_pos1)=c(0:315)
+
+z_pos1=mutate(z_pos1, id=row_number())
+
+molten_z = melt(z_pos1, id= c("0", "id"))
+z_pos_long=data.frame(matrix(0,nrow=nrow(molten_z), ncol=ncol(molten_z)))
+z_pos_long[,1]=molten_z[,2]
+z_pos_long[,2]=molten_z[,3]
+z_pos_long[,3]=molten_z[,4]
+z_pos_long[,4]=molten_z[,1]
+
+colnames(z_pos_long)= c("time_series_id", "time_index", "Z","class")
+
+x_1 = c()
+x_1=x_pos_long[,4]
+xyz_pos_long=cbind(x_pos_long[,-4],y_pos_long[,3],z_pos_long[,3],x_pos_long[,4])
+
+colnames(xyz_pos_long)=c("time_series_id", "time_index", "X", "Y","Z","class")
+
+princ <- princomp(xyz_pos_long[,3:5], cor=TRUE)
+print(summary(princ, loadings=TRUE))
+
+pre = predict(princ,xyz_pos_long[,3:5])
+xyz_pos_uni = mutate(xyz_pos_long,value=pre[,1])
+pred_xyz=data.frame()
+pred_xyz = subset(xyz_pos_uni, select =-c(X,Y,Z))
+
+indexes=c()
+
+for (i in 1:8){
+  for(j in 1:nrow(x_tr)){
+    if(x_tr[j,1]==i){
+      indexes[i] = j 
+      break
+    }
+  }
+}
+
+indexes2=c()
+count=rep(0,8)
+
+for (i in 1:16){
+  for(j in 1:nrow(x_tr)){
+    if(x_tr[j,1]==i){
+      indexes2[i] = j 
+      count[i]=count[i]+1
+      
+      if(count[i]==2)
+      {
+        break
+      }
+    }
+  }
+}
+
+indexess=append(indexes,indexes2)
+
+new_one=filter(pred_xyz, time_series_id %in% indexess)
+
+new_one$time_index=as.numeric(new_one$time_index)
+new_one$time_series_id=as.factor(new_one$time_series_id)
+new_one$class=as.factor(new_one$class)
+
+for(i in 1:8)
+  {
+    plo=ggplot(subset(new_one,time_series_id==indexes[i] | time_series_id==indexes2[i]), aes(x=time_index, y=value, colour=time_series_id)) + geom_line() + xlab("time_index") + ylab("value") + ggtitle(paste("Gesture from class",i))
+    print(plo)  
+  }
+
+
+```
+
+
+Comp.1 covers 54 % of the variance, whereas Comp.2 and Comp.3 covers 36% and 10% of the variance respectively. Therefore, we will select *Comp.1*, which hast the highest percentage of variance covering, for dimensionality reduction.
+
+## Part (c)
+We will apply PCA to each gesture class seperately
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+#class1
+
+xyz_1 = subset(xyz_pos_long, class==1)
+pirinc1=princomp(xyz_1[,3:5], cor = TRUE)
+print(summary(pirinc1,loadings=TRUE))
+
+pre1 = predict(pirinc1,xyz_1[,3:5])
+xyz_1_uni = mutate(xyz_1,value=pre1[,1])
+xyz_1_uni = mutate(xyz_1_uni, time_series_id=as.factor(time_series_id), time_index=as.numeric(time_index))
+xyz_1_uni = subset(xyz_1_uni,select=-c(X,Y,Z))
+xyz_1_uni = filter(xyz_1_uni, time_series_id==indexess[1] | time_series_id==indexess[9])
+
+ggplot(xyz_1_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value") + theme(plot.title=element_text(hjust = 0.5)) + ggtitle("Time Series from Class 1")
+
+ggplot(xyz_1_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value")+ ggtitle("Time Series from Class 1")
+
+
+#class2
+
+xyz_2 = subset(xyz_pos_long, class==2)
+pirinc2=princomp(xyz_2[,3:5], cor = TRUE)
+print(summary(pirinc2,loadings=TRUE))
+
+pre2 = predict(pirinc2,xyz_2[,3:5])
+xyz_2_uni = mutate(xyz_2,value=pre2[,1])
+xyz_2_uni = mutate(xyz_2_uni, time_series_id=as.factor(time_series_id), time_index=as.numeric(time_index))
+xyz_2_uni = subset(xyz_2_uni,select=-c(X,Y,Z))
+xyz_2_uni = filter(xyz_2_uni, time_series_id==indexess[2] | time_series_id==indexess[10])
+
+ggplot(xyz_2_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value")+ ggtitle("Time Series from Class 2")
+#class3
+
+xyz_3 = subset(xyz_pos_long, class==3)
+pirinc3=princomp(xyz_3[,3:5], cor = TRUE)
+print(summary(pirinc3,loadings=TRUE))
+
+pre3 = predict(pirinc3,xyz_3[,3:5])
+xyz_3_uni = mutate(xyz_3,value=pre3[,1])
+xyz_3_uni = mutate(xyz_3_uni, time_series_id=as.factor(time_series_id), time_index=as.numeric(time_index))
+xyz_3_uni = subset(xyz_3_uni,select=-c(X,Y,Z))
+xyz_3_uni = filter(xyz_3_uni, time_series_id==indexess[3] | time_series_id==indexess[11])
+ggplot(xyz_3_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value")+ ggtitle("Time Series from Class 3")
+
+#class4
+
+xyz_4 = subset(xyz_pos_long, class==4)
+pirinc4=princomp(xyz_4[,3:5], cor = TRUE)
+print(summary(pirinc4,loadings=TRUE))
+
+pre4 = predict(pirinc4,xyz_4[,3:5])
+xyz_4_uni = mutate(xyz_4,value=pre4[,1])
+xyz_4_uni = mutate(xyz_4_uni, time_series_id=as.factor(time_series_id), time_index=as.numeric(time_index))
+xyz_4_uni = subset(xyz_4_uni,select=-c(X,Y,Z))
+xyz_4_uni = filter(xyz_4_uni, time_series_id==indexess[4] | time_series_id==indexess[12])
+ggplot(xyz_4_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value")+ ggtitle("Time Series from Class 4")
+
+#class5
+
+xyz_5 = subset(xyz_pos_long, class==5)
+pirinc5=princomp(xyz_5[,3:5], cor = TRUE)
+print(summary(pirinc5,loadings=TRUE))
+
+pre5 = predict(pirinc5,xyz_5[,3:5])
+xyz_5_uni = mutate(xyz_5,value=pre5[,1])
+xyz_5_uni = mutate(xyz_5_uni, time_series_id=as.factor(time_series_id), time_index=as.numeric(time_index))
+xyz_5_uni = subset(xyz_5_uni,select=-c(X,Y,Z))
+xyz_5_uni = filter(xyz_5_uni, time_series_id==indexess[5] | time_series_id==indexess[13])
+ggplot(xyz_5_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value")+ ggtitle("Time Series from Class 5")
+
+#class6
+
+xyz_6 = subset(xyz_pos_long, class==6)
+pirinc6=princomp(xyz_6[,3:5], cor = TRUE)
+print(summary(pirinc6,loadings=TRUE))
+
+pre6 = predict(pirinc6,xyz_6[,3:5])
+xyz_6_uni = mutate(xyz_6,value=pre6[,1])
+xyz_6_uni = mutate(xyz_6_uni, time_series_id=as.factor(time_series_id), time_index=as.numeric(time_index))
+xyz_6_uni = subset(xyz_6_uni,select=-c(X,Y,Z))
+xyz_6_uni = filter(xyz_6_uni, time_series_id==indexess[6] | time_series_id==indexess[14])
+ggplot(xyz_6_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value")+ ggtitle("Time Series from Class 6")
+
+#class7
+
+xyz_7 = subset(xyz_pos_long, class==7)
+pirinc7=princomp(xyz_7[,3:5], cor = TRUE)
+print(summary(pirinc7,loadings=TRUE))
+
+pre7 = predict(pirinc7,xyz_7[,3:5])
+xyz_7_uni = mutate(xyz_7,value=pre7[,1])
+xyz_7_uni = mutate(xyz_7_uni, time_series_id=as.factor(time_series_id), time_index=as.numeric(time_index))
+xyz_7_uni = subset(xyz_7_uni,select=-c(X,Y,Z))
+xyz_7_uni = filter(xyz_7_uni, time_series_id==indexess[7] | time_series_id==indexess[15])
+
+ggplot(xyz_7_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value")+ ggtitle("Time Series from Class 7")
+
+#class8
+
+xyz_8 = subset(xyz_pos_long, class==8)
+pirinc8=princomp(xyz_8[,3:5], cor = TRUE)
+print(summary(pirinc8,loadings=TRUE))
+
+pre8 = predict(pirinc8,xyz_8[,3:5])
+xyz_8_uni = mutate(xyz_8,value=pre8[,1])
+xyz_8_uni = mutate(xyz_8_uni, time_series_id=as.factor(time_series_id), time_index=as.numeric(time_index))
+xyz_8_uni = subset(xyz_8_uni,select=-c(X,Y,Z))
+xyz_8_uni = filter(xyz_8_uni, time_series_id==indexess[8] | time_series_id==indexess[16])
+
+ggplot(xyz_8_uni) + geom_line(aes(x=time_index, y=value, colour=time_series_id)) + xlab("time_index") + ylab("value")+ ggtitle("Time Series from Class 8")
+
+```
+
+For the gestures, the percentages of the variance covered by the first components can be found as 56%, 42%, 49%, 55%, 66%, 60%, 56% and 50%, respectively. Hence, we can say that gesture class 2 and gesture class 5 have different characteristics in terms of their first component than remaining gesture classes.
+
+
+
+## Part (d)
+
+First, we calculated distincas by euclidian method. Then, applied multi-dimensional scaling to distance matrix to represent each time series on a 2-dimensional feature space.
+
+Then, each point for gestures are plotted on the graph. Howver, gestures cannot be separated easily by this graph. For example, 1 and 5 are look distinguishable, whereas 1 and 6 are indistinguishable. 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+xyz_bind = cbind(x_tr,y_tr[,-1],z_tr[,-1])
+bind_without_class=scale(xyz_bind[,-1])
+distance_btw = as.matrix(dist(bind_without_class, method="euclidian"))
+MDS = cmdscale(distance_btw)
+
+yepyeni = data.frame(cbind(MDS[,1],MDS[,2],xyz_bind[,1]))
+
+ggplot(yepyeni,aes(x=MDS[,1],y=MDS[,2],color=as.factor(X3)))+geom_point()+ ggtitle("MDS Result")
+
+```
+
