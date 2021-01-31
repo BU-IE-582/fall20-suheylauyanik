@@ -20,3 +20,5 @@
 
 -You can find the Homework 2 Solutions [here](files/SUHEYLA_YILDIZ_HW2.html). Also, the codes are [here](files/SUHEYLA_YILDIZ_HW2.Rmd).
 
+[Homework3 Description](files/IE582_Fall20_Homework4.pdf)
+-You can find the homework 4 solutions [here](files/SUHEYLA_YILDIZ_HW4.html). Also, the codes are [here](files/SUHEYLA_YILDIZ_HW4.Rmd). 
