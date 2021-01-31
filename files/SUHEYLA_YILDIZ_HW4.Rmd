@@ -1,0 +1,221 @@
+---
+title: "SUHEYLA_YILDIZ_HW4"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##1.Superconductivity Data Set
+
+**Data Set Information:**
+
+There are two files: (1) train.csv contains 81 features extracted from 21263 superconductors along with the critical temperature in the 82nd column, (2) unique_m.csv contains the chemical formula broken up for all the 21263 superconductors from the train.csv file. The last two columns have the critical temperature and chemical formula. The original data comes from [Web Link] which is public. The goal here is to predict the critical temperature based on the features extracted.
+
+```{r pressure, echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+setwd("C:/Users/HP/Desktop/IE582/HW4")
+getwd()
+library(data.table)
+library(imputeTS)
+library(caret)
+park_data = data.table(read.csv("train.csv"))
+park_data=park_data[ ,lapply(.SD, na_mean)]
+park_data=data.frame(data.matrix(park_data))
+
+str(park_data)
+```
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+response=park_data[,82]
+park_data=park_data[,-82]
+
+park_data=cbind(response,park_data)
+colnames(park_data)[1]="response"
+
+
+set.seed(1000)
+
+tr=sample(1:21263, 16666)
+park_tr = park_data[tr,]
+park_te = park_data[-tr,]
+```
+
+##Penalized Regression
+Cross validation is used in the penalized regression approach in order to find best value of  the lambda. 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(glmnet)
+
+park_tr_n = as.matrix(park_tr[,-1])
+park_te_n = as.matrix(park_te[,-1])
+cross_v = cv.glmnet(park_tr_n,as.matrix(park_tr$response),family="gaussian", alpha=1)
+options(repr.plot.width=7, repr.plot.height=7)
+plot(cross_v)
+cross_v
+
+print(c("min lambda: ",cross_v$lambda.min))
+
+
+```
+
+The best value of lambda is  "0.00246753342694286". 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+fito= glmnet(park_tr_n,as.matrix(park_tr$response),family="gaussian", alpha=1,lambda=cross_v$lambda.min)
+fito
+
+predictions = predict(fito, park_tr_n)
+
+res=cbind(park_tr$response, data.frame(predictions))
+rss = sum((res[,2] - res[,1]) ^ 2)  
+tss =  sum((res[,1] - mean(res[,1])) ^ 2)  
+rsq = 1 - rss/tss
+print(c("coefficient of determination (train):",rsq))
+
+
+
+predictions =  predict(fito, park_te_n)
+
+res=cbind(park_te$response, data.frame(predictions))
+
+for_te = 1 - sum((res[,2] - res[,1]) ^ 2)/sum((res[,1] - mean(res[,1])) ^ 2)
+print(c("coefficient of determination (test):",for_te))
+```
+
+$R^2$ values for train and test set are "0.73457705457218 & 0.739073481789113, respectively. 
+
+##Decision Tree
+
+In decision tree approach, for the minimal number of observations per tree leaf 2,3,4 and 5 are used; for the complexity parameter 0.005, 0.01, 0.015 and 0.02 are used.
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(rpart)
+require(rpart.plot)
+set.seed(555)
+
+decision_tree = function(i){
+  d_tree=rpart(response~.,data = park_tr,control = rpart.control(minbucket = 2+i,cp=0.005*i),method = "anova")
+  
+  rpart.plot(d_tree,type = 3,digits = 3,fallen.leaves = TRUE)
+  
+  predictions=predict(d_tree,park_te)
+  res=cbind(park_te$response, data.frame(predictions))
+  rss =sum((res[,2] - res[,1]) ^ 2)  ## residual sum of squares
+  tss = sum((res[,1] - mean(res[,1])) ^ 2)  ## total sum of squares
+  rsq = 1 - rss/tss
+  print(c("coefficient of determination:",rsq))
+  
+  plotcp(d_tree)
+  return(rsq)
+}
+
+coefficient = list()
+c = decision_tree(1)
+coefficient = append(coefficient,c)
+
+c = decision_tree(2)
+coefficient = append(coefficient,c)
+
+c = decision_tree(3)
+coefficient = append(coefficient,c)
+
+c = decision_tree(4)
+coefficient = append(coefficient,c)
+
+coefficient
+
+
+```
+
+
+
+"0.767"            
+"0.721"            
+"0.694"            
+"0.671"
+
+When we compare the models, the best model so far is found with the minimal number of observations per tree leaf as 3 and the complexity parameter as 0.005 and its coefficient of determination is 0.767.
+
+##Gradient Boosting
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(caret)
+library(gbm)
+
+trcontrol=trainControl(method = "repeatedcv",number=5)
+set.seed(444)
+
+gbmm =gbm(response~.,data = park_tr,distribution="gaussian",cv.folds = 3)
+summary(gbmm)
+
+predictions=predict(gbmm,park_te,n.trees = 100)
+res=cbind(park_te$response, data.frame(predictions))
+rss = sum((res[,2] - res[,1]) ^ 2)  
+tss = sum((res[,1] - mean(res[,1])) ^ 2)  
+rsq = 1 - rss/tss
+print(c("coefficient of determination:",rsq))
+
+```
+Coefficient of determination is found as 0.7604 for gradient boosting method.
+
+**The best model is found by decision tree method and its coefficient of determination is 0.767.**
+
+
+##Optical Recognition of Handwritten Digits Data Set
+
+**Data Description**
+We used preprocessing programs made available by NIST to extract normalized bitmaps of handwritten digits from a preprinted form. From a total of 43 people, 30 contributed to the training set and different 13 to the test set. 32x32 bitmaps are divided into nonoverlapping blocks of 4x4 and the number of on pixels are counted in each block. This generates an input matrix of 8x8 where each element is an integer in the range 0..16. This reduces dimensionality and gives invariance to small distortions.
+
+**Attribute Information:**
+
+All input attributes are integers in the range 0..16.
+The last attribute is the class code 0..9
+
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+setwd("C:/Users/HP/Desktop/IE582/HW4")
+getwd()
+
+library(data.table)
+library(imputeTS)
+library(glmnet)
+
+digit_tr = read.csv(("optdigits.tra"), sep=',', header=F)
+digit_te = read.csv(("optdigits.tes"), sep=',', header=F)
+colnames(digit_tr)[65]="response"
+colnames(digit_te)[65]="response"
+digit_tr$response=as.factor(digit_tr$response)
+digit_te$response=as.factor(digit_te$response)
+
+digit_tr_n = as.matrix(digit_tr[,-65])
+digit_te_n = as.matrix(digit_te[,-65])
+```
+
+##Penalized Regression##
+```{r}
+cross_validation=cv.glmnet(digit_tr_n, digit_tr$response,type.measure = "class", family="multinomial", nfolds=10)
+options(repr.plot.width=5, repr.plot.height=5)
+print(c("min lambda: ",cross_validation$lambda.min))
+plot(cross_validation)
+
+pre_tra = predict(cross_validation, newx=digit_tr_n,s=c("lambda.min"), type="class" )
+# accuracy for train data
+print(cross_validation)
+tab_tr=table(pre_tra[,1],digit_tr$response)
+print("confusion matrix for the train data")
+print(tab_tr)
+
+pre_te = predict(cross_validation, newx=digit_te_n,s=c("lambda.min"), type="class" )
+# accuracy for train data
+print(cross_validation)
+tab_te=table(pre_te[,1],digit_te$response)
+print("confusion matrix for the train data")
+print(tab_te)
+
+print(c("Train error",1-sum(diag(tab_tr)/sum(tab_tr))))
+print(c("Test error",1-sum(diag(tab_te)/sum(tab_te))))
+```
+
