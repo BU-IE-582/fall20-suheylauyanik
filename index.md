@@ -27,4 +27,4 @@
 -You can find the homework 4 solutions [here](files/SUHEYLA_YILDIZ_HW4.html). Also, the codes are [here](files/SUHEYLA_YILDIZ_HW4.Rmd). 
 
 ## Final Project
--You can find Project report [here](files/IE582-Final Project.pdf). Also, the codes are [here](files/IE582-FinalProject).
+-You can find Project report [here](files/IE582-FinalProject.pdf). Also, the codes are [here](files/IE582-FinalProject).
