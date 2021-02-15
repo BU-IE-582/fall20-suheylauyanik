@@ -25,3 +25,6 @@
 [Homework4 Description](files/IE582_Fall2020_Homework4.pdf)
 
 -You can find the homework 4 solutions [here](files/SUHEYLA_YILDIZ_HW4.html). Also, the codes are [here](files/SUHEYLA_YILDIZ_HW4.Rmd). 
+
+##Project
+-You can find Project report [here](files/IE582-Final Project.pdf). Also, the codes are [here](files/IE582-FinalProject).
